@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Keeptouch</title>
+  <link rel="stylesheet" href="sidebar.css" />
+</head>
+<body>
+  <div id="app">
+    <header>
+      <span class="logo">Keeptouch</span>
+      <button id="btn-refresh" title="Refresh">↺</button>
+    </header>
+
+    <div id="view-auth" class="view hidden">
+      <p>Sign in to see contacts you've lost touch with.</p>
+      <button id="btn-signin">Sign in with Google</button>
+    </div>
+
+    <div id="view-loading" class="view hidden">
+      <div class="spinner"></div>
+      <p>Loading contacts…</p>
+    </div>
+
+    <div id="view-empty" class="view hidden">
+      <p>No contacts found yet. Send some emails first!</p>
+    </div>
+
+    <div id="view-list" class="view hidden">
+      <p class="subtitle">People you haven't contacted recently</p>
+      <ul id="contact-list"></ul>
+    </div>
+  </div>
+  <script src="sidebar.js" type="module"></script>
+</body>
+</html>
