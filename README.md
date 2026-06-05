@@ -25,7 +25,7 @@ You'll see a list of fake contacts. No Google account or API key needed.
 
 ## Full setup (real Gmail data)
 
-> You'll need a Google account and ~10 minutes to configure the API.
+> You'll need a Google account and ~30 minutes if this is your first time setting up a Google Cloud project.
 
 ### Step 1 — Clone and load the extension
 
