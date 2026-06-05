@@ -39,11 +39,17 @@ const btnRefresh = document.getElementById("btn-refresh");
 // Responses come from the content script on mail.google.com
 const GMAIL_ORIGIN = "https://mail.google.com";
 
-function sendToParent(type, payload) {
-  return new Promise((resolve) => {
+function sendToParent(type, payload, timeoutMs = 10_000) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      window.removeEventListener("message", handler);
+      reject(new Error(`Timeout waiting for ${type}_RESPONSE`));
+    }, timeoutMs);
+
     const handler = (event) => {
       if (event.origin !== GMAIL_ORIGIN) return;
       if (event.data?.type === `${type}_RESPONSE`) {
+        clearTimeout(timer);
         window.removeEventListener("message", handler);
         resolve(event.data.payload);
       }
@@ -146,8 +152,9 @@ btnSignin.addEventListener("click", async () => {
 
 btnRefresh.addEventListener("click", loadContacts);
 
-// Service worker pushed an update
+// Service worker pushed an update (only accept from Gmail content script)
 window.addEventListener("message", (event) => {
+  if (event.origin !== GMAIL_ORIGIN) return;
   if (event.data?.type === "CONTACTS_UPDATED") loadContacts();
 });
 

@@ -48,9 +48,8 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 
 // ── Business logic ─────────────────────────────────────────────────────────
 
-async function refreshContacts() {
-  const signedIn = await isSignedIn();
-  if (!signedIn) return;
+async function refreshContacts(alreadyVerified = false) {
+  if (!alreadyVerified && !(await isSignedIn())) return;
 
   try {
     const contacts = await getSentContacts(200);
@@ -69,15 +68,20 @@ async function refreshContacts() {
 }
 
 async function handleGetContacts(sendResponse) {
-  const { contacts, lastRefresh } = await chrome.storage.local.get(["contacts", "lastRefresh"]);
+  try {
+    const { contacts, lastRefresh } = await chrome.storage.local.get(["contacts", "lastRefresh"]);
+    const stale = !lastRefresh || Date.now() - lastRefresh > REFRESH_INTERVAL_MINUTES * 60 * 1000 || !contacts?.length;
+    const signedIn = await isSignedIn();
 
-  const stale = !lastRefresh || Date.now() - lastRefresh > REFRESH_INTERVAL_MINUTES * 60 * 1000 || !contacts?.length;
-  const signedIn = await isSignedIn();
-  if (stale && signedIn) {
-    await refreshContacts();
-    const updated = await chrome.storage.local.get("contacts");
-    sendResponse({ contacts: updated.contacts ?? [] });
-  } else {
-    sendResponse({ contacts: contacts ?? [] });
+    if (stale && signedIn) {
+      await refreshContacts(/* already verified signed in */ true);
+      const updated = await chrome.storage.local.get("contacts");
+      sendResponse({ contacts: updated.contacts ?? [] });
+    } else {
+      sendResponse({ contacts: contacts ?? [] });
+    }
+  } catch (err) {
+    console.error("[Keeptouch] handleGetContacts failed:", err);
+    sendResponse({ contacts: [] });
   }
 }

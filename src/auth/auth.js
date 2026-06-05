@@ -65,7 +65,12 @@ export async function getToken(interactive = false) {
 export async function signOut() {
   const { token } = await chrome.storage.session.get("token");
   if (token) {
-    await fetch(`https://accounts.google.com/o/oauth2/revoke?token=${token}`);
+    // POST required by Google's revoke endpoint (GET is silently ignored)
+    await fetch("https://oauth2.googleapis.com/revoke", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: `token=${encodeURIComponent(token)}`,
+    }).catch(() => {}); // best-effort; clear local cache regardless
     await chrome.storage.session.remove(["token", "tokenExpiry"]);
   }
 }
