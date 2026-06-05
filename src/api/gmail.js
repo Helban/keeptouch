@@ -34,10 +34,19 @@ export async function listMessages(query, maxResults = 100) {
  * Returns { id, from, to, date, subject }.
  */
 export async function getMessage(id) {
-  const data = await apiFetch(`/messages/${id}`, {
-    format: "metadata",
-    metadataHeaders: ["From", "To", "Date", "Subject"].join(","),
+  const token = await getToken(false);
+  const url = new URL(`${BASE}/messages/${id}`);
+  url.searchParams.set("format", "metadata");
+  // Gmail API requires metadataHeaders as repeated params, not comma-separated
+  ["From", "To", "Date", "Subject"].forEach((h) =>
+    url.searchParams.append("metadataHeaders", h)
+  );
+
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
   });
+  if (!res.ok) throw new Error(`Gmail API /messages/${id} → ${res.status}`);
+  const data = await res.json();
 
   const headers = {};
   for (const h of data.payload?.headers ?? []) {

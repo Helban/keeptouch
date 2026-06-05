@@ -1,7 +1,7 @@
 // Service worker (MV3) — handles alarms and message routing.
 // Lives in background; cannot access the DOM.
 
-import { isSignedIn } from "../auth/auth.js";
+import { isSignedIn, getToken } from "../auth/auth.js";
 import { getSentContacts } from "../api/gmail.js";
 
 const ALARM_NAME = "refresh-contacts";
@@ -37,13 +37,20 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     case "CHECK_AUTH":
       isSignedIn().then((ok) => sendResponse({ signedIn: ok }));
       return true;
+
+    case "SIGN_IN":
+      getToken(true)
+        .then(() => sendResponse({ ok: true }))
+        .catch((e) => sendResponse({ ok: false, error: e.message }));
+      return true;
   }
 });
 
 // ── Business logic ─────────────────────────────────────────────────────────
 
 async function refreshContacts() {
-  if (!(await isSignedIn())) return;
+  const signedIn = await isSignedIn();
+  if (!signedIn) return;
 
   try {
     const contacts = await getSentContacts(200);
@@ -64,9 +71,9 @@ async function refreshContacts() {
 async function handleGetContacts(sendResponse) {
   const { contacts, lastRefresh } = await chrome.storage.local.get(["contacts", "lastRefresh"]);
 
-  // If cache is empty or older than 1 hour, fetch now
-  const stale = !lastRefresh || Date.now() - lastRefresh > REFRESH_INTERVAL_MINUTES * 60 * 1000;
-  if (stale && (await isSignedIn())) {
+  const stale = !lastRefresh || Date.now() - lastRefresh > REFRESH_INTERVAL_MINUTES * 60 * 1000 || !contacts?.length;
+  const signedIn = await isSignedIn();
+  if (stale && signedIn) {
     await refreshContacts();
     const updated = await chrome.storage.local.get("contacts");
     sendResponse({ contacts: updated.contacts ?? [] });

@@ -37,7 +37,6 @@
   const EXTENSION_ORIGIN = chrome.runtime.getURL("").slice(0, -1); // "chrome-extension://<id>"
 
   window.addEventListener("message", (event) => {
-    // Reject messages not coming from our own iframe on the extension origin
     if (event.source !== frame.contentWindow) return;
     if (event.origin !== EXTENSION_ORIGIN) return;
 
