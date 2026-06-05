@@ -1,7 +1,25 @@
 // Sidebar UI — runs inside the iframe, communicates via postMessage.
 // No direct chrome.* access here (cross-origin iframe restriction).
 
-const DAYS_THRESHOLD = 30; // show contacts not contacted for ≥ this many days
+const DAYS_THRESHOLD = 30;
+const DEMO_MODE = false; // set to true to show fake contacts for portfolio demos
+
+const DEMO_CONTACTS = [
+  { email: "sarah.johnson@example.com",  name: "Sarah Johnson",  lastContacted: daysAgo(312) },
+  { email: "mike.chen@example.com",      name: "Mike Chen",      lastContacted: daysAgo(287) },
+  { email: "anna.kowalski@example.com",  name: "Anna Kowalski",  lastContacted: daysAgo(254) },
+  { email: "david.miller@example.com",   name: "David Miller",   lastContacted: daysAgo(198) },
+  { email: "lisa.wang@example.com",      name: "Lisa Wang",      lastContacted: daysAgo(167) },
+  { email: "tomasz.nowak@example.com",   name: "Tomasz Nowak",   lastContacted: daysAgo(143) },
+  { email: "emma.brown@example.com",     name: "Emma Brown",     lastContacted: daysAgo(121) },
+  { email: "carlos.garcia@example.com",  name: "Carlos Garcia",  lastContacted: daysAgo(98)  },
+  { email: "julia.schmidt@example.com",  name: "Julia Schmidt",  lastContacted: daysAgo(76)  },
+  { email: "james.wilson@example.com",   name: "James Wilson",   lastContacted: daysAgo(54)  },
+];
+
+function daysAgo(n) {
+  return new Date(Date.now() - n * 86400000).toISOString();
+}
 
 // ── DOM refs ────────────────────────────────────────────────────────────────
 
@@ -45,8 +63,12 @@ function showView(name) {
 // ── Init ────────────────────────────────────────────────────────────────────
 
 async function init() {
-  showView("loading");
+  if (DEMO_MODE) {
+    renderContacts(DEMO_CONTACTS);
+    return;
+  }
 
+  showView("loading");
   const { signedIn } = await sendToParent("CHECK_AUTH");
   if (!signedIn) {
     showView("auth");
@@ -57,6 +79,11 @@ async function init() {
 }
 
 async function loadContacts() {
+  if (DEMO_MODE) {
+    renderContacts(DEMO_CONTACTS);
+    return;
+  }
+
   showView("loading");
   const { contacts } = await sendToParent("GET_CONTACTS");
   renderContacts(contacts ?? []);

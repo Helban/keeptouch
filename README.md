@@ -2,6 +2,8 @@
 
 > Gmail sidebar showing people you haven't emailed in a while.
 
+![Keeptouch demo](assets/demo.gif)
+
 ## Features
 
 - Sidebar slides in from the right inside Gmail
