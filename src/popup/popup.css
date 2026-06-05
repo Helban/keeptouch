@@ -1,0 +1,26 @@
+body { font-family: 'Google Sans', Roboto, sans-serif; margin: 0; }
+
+.popup {
+  width: 240px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+h1 { font-size: 16px; color: #1a73e8; margin: 0; }
+#status { font-size: 13px; color: #5f6368; margin: 0; }
+
+button {
+  background: #1a73e8;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+}
+button:hover { background: #1557b0; }
+
+.hint { font-size: 11px; color: #9aa0a6; margin: 0; }
