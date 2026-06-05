@@ -15,16 +15,6 @@
     "https://www.googleapis.com/*"
   ],
 
-  "oauth2": {
-    "client_id": "YOUR_GOOGLE_OAUTH_CLIENT_ID.apps.googleusercontent.com",
-    "scopes": [
-      "https://www.googleapis.com/auth/gmail.readonly",
-      "https://www.googleapis.com/auth/contacts.readonly",
-      "openid",
-      "email"
-    ]
-  },
-
   "background": {
     "service_worker": "src/background/service_worker.js",
     "type": "module"

@@ -1,48 +1,75 @@
-// Auth module — wraps chrome.identity.getAuthToken (MV3 OAuth2 flow)
-// Token is cached by Chrome automatically; we never store it in chrome.storage.
+// Auth module — uses launchWebAuthFlow (works for unpacked/dev extensions).
+// Implicit flow: Google redirects back with access_token in the URL hash.
+// Token is stored in chrome.storage.session (cleared on browser close).
 
+const CLIENT_ID = "991760563034-8rk8bsida6jppv4156u7drurng0q7u4u.apps.googleusercontent.com";
+const REDIRECT_URI = `https://${chrome.runtime.id}.chromiumapp.org/`;
 const SCOPES = [
   "https://www.googleapis.com/auth/gmail.readonly",
   "https://www.googleapis.com/auth/contacts.readonly",
   "openid",
   "email",
-];
+].join(" ");
 
-/**
- * Get a valid OAuth2 access token.
- * - interactive=true  → shows Google consent screen if needed (call from user gesture)
- * - interactive=false → silent refresh; throws if no cached token
- */
+function buildAuthUrl() {
+  const url = new URL("https://accounts.google.com/o/oauth2/v2/auth");
+  url.searchParams.set("client_id", CLIENT_ID);
+  url.searchParams.set("redirect_uri", REDIRECT_URI);
+  url.searchParams.set("response_type", "token");
+  url.searchParams.set("scope", SCOPES);
+  url.searchParams.set("include_granted_scopes", "true");
+  return url.toString();
+}
+
 export async function getToken(interactive = false) {
+  // Return cached token if still valid (with 60s margin)
+  const cached = await chrome.storage.session.get(["token", "tokenExpiry"]);
+  if (cached.token && cached.tokenExpiry > Date.now() + 60_000) {
+    return cached.token;
+  }
+
   return new Promise((resolve, reject) => {
-    chrome.identity.getAuthToken({ interactive, scopes: SCOPES }, (token) => {
-      if (chrome.runtime.lastError) {
-        reject(new Error(chrome.runtime.lastError.message));
-      } else {
+    chrome.identity.launchWebAuthFlow(
+      { url: buildAuthUrl(), interactive },
+      async (responseUrl) => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+          return;
+        }
+        if (!responseUrl) {
+          reject(new Error("No response URL"));
+          return;
+        }
+
+        // Token is in the hash fragment: #access_token=...&expires_in=3600
+        const params = new URLSearchParams(new URL(responseUrl).hash.slice(1));
+        const token = params.get("access_token");
+        const expiresIn = parseInt(params.get("expires_in") ?? "3600", 10);
+
+        if (!token) {
+          reject(new Error("No access token in response"));
+          return;
+        }
+
+        await chrome.storage.session.set({
+          token,
+          tokenExpiry: Date.now() + expiresIn * 1000,
+        });
+
         resolve(token);
       }
-    });
+    );
   });
 }
 
-/**
- * Force sign-out: revoke the token from Google and remove it from Chrome cache.
- * Call this when the user clicks "Sign out" in the popup.
- */
 export async function signOut() {
-  const token = await getToken(false).catch(() => null);
-  if (!token) return;
-
-  // Revoke on Google's server so the token can't be used anymore
-  await fetch(`https://accounts.google.com/o/oauth2/revoke?token=${token}`);
-
-  // Remove from Chrome's local cache
-  await new Promise((resolve) => chrome.identity.removeCachedAuthToken({ token }, resolve));
+  const { token } = await chrome.storage.session.get("token");
+  if (token) {
+    await fetch(`https://accounts.google.com/o/oauth2/revoke?token=${token}`);
+    await chrome.storage.session.remove(["token", "tokenExpiry"]);
+  }
 }
 
-/**
- * Check if the user is currently signed in (has a cached token).
- */
 export async function isSignedIn() {
   try {
     await getToken(false);
