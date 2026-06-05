@@ -12,32 +12,53 @@
 - Hourly background refresh via Chrome Alarms API
 - OAuth2 via `chrome.identity` — no server required
 
-## Setup
+## Quick start (demo mode)
 
-### 1. Google Cloud project
+Want to see the UI without connecting your Gmail account?
 
-1. Go to [console.cloud.google.com](https://console.cloud.google.com)
-2. Create a new project (e.g. "Keeptouch")
-3. Enable **Gmail API**
-4. Go to **APIs & Services → Credentials → Create Credentials → OAuth 2.0 Client ID**
-5. Application type: **Chrome Extension**
-6. Load the extension in `chrome://extensions` first (Developer mode), copy the **Extension ID**
-7. Paste the Extension ID into the OAuth client
-8. Copy the **Client ID**
+1. Clone the repo
+2. Open `src/sidebar/sidebar.js` and set `DEMO_MODE = true`
+3. Open `chrome://extensions` → enable **Developer mode** → **Load unpacked** → select the `keeptouch/` folder
+4. Open Gmail — click the **KT** button on the right edge
 
-### 2. Configure the extension
+You'll see a list of fake contacts. No Google account or API key needed.
 
-Open `manifest.json` and replace:
-```json
-"client_id": "YOUR_GOOGLE_OAUTH_CLIENT_ID.apps.googleusercontent.com"
+## Full setup (real Gmail data)
+
+> You'll need a Google account and ~10 minutes to configure the API.
+
+### Step 1 — Clone and load the extension
+
+```bash
+git clone https://github.com/Helban/keeptouch.git
 ```
 
-### 3. Load in Chrome
+Open `chrome://extensions`, enable **Developer mode**, click **Load unpacked** and select the `keeptouch/` folder. Note down the **Extension ID** shown below the extension name (32-character string).
 
-1. Open `chrome://extensions`
-2. Enable **Developer mode**
-3. Click **Load unpacked** → select the `keeptouch/` folder
-4. Open Gmail — the "KT" toggle appears on the right edge
+### Step 2 — Google Cloud project
+
+1. Go to [console.cloud.google.com](https://console.cloud.google.com) and create a new project
+2. Enable **Gmail API** (*APIs & Services → Enable APIs → Gmail API*)
+3. Configure the OAuth consent screen (*APIs & Services → OAuth consent screen*):
+   - User type: **External**
+   - Add your Gmail address as a **Test user**
+   - Add scope: `https://www.googleapis.com/auth/gmail.readonly`
+4. Create credentials (*Credentials → Create → OAuth 2.0 Client ID*):
+   - Application type: **Chrome Extension**
+   - Item ID: paste your **Extension ID** from Step 1
+   - Copy the generated **Client ID**
+
+### Step 3 — Add your Client ID
+
+Open `src/auth/auth.js` and replace the `CLIENT_ID` constant:
+
+```js
+const CLIENT_ID = "YOUR_CLIENT_ID.apps.googleusercontent.com";
+```
+
+Reload the extension in `chrome://extensions` (click the refresh icon), open Gmail, and sign in via the extension popup.
+
+> **Note:** The first time Google will show an "unverified app" warning — click *Advanced → Proceed* to continue. This appears because the app isn't published to the Chrome Web Store.
 
 ## Configuration
 
