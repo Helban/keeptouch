@@ -10,29 +10,21 @@ async function apiFetch(path, params = {}) {
   const url = new URL(`${BASE}${path}`);
   Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
 
-  const res = await fetch(url, {
+  const httpResponse = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
   });
 
-  if (!res.ok) {
-    throw new Error(`Gmail API ${path} → ${res.status} ${res.statusText}`);
+  if (!httpResponse.ok) {
+    throw new Error(`Gmail API ${path} → ${httpResponse.status} ${httpResponse.statusText}`);
   }
-  return res.json();
+  return httpResponse.json();
 }
 
-/**
- * List message IDs matching a query (same syntax as Gmail search box).
- * Returns up to `maxResults` IDs (default 100).
- */
 export async function listMessages(query, maxResults = 100) {
-  const data = await apiFetch("/messages", { q: query, maxResults });
-  return data.messages ?? [];
+  const page = await apiFetch("/messages", { q: query, maxResults });
+  return page.messages ?? [];
 }
 
-/**
- * Fetch a single message with only the headers we need (cheap "metadata" format).
- * Returns { id, from, to, date, subject }.
- */
 export async function getMessage(id) {
   const token = await getToken(false);
   const url = new URL(`${BASE}/messages/${id}`);
@@ -42,19 +34,19 @@ export async function getMessage(id) {
     url.searchParams.append("metadataHeaders", h)
   );
 
-  const res = await fetch(url, {
+  const httpResponse = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  if (!res.ok) throw new Error(`Gmail API /messages/${id} → ${res.status}`);
-  const data = await res.json();
+  if (!httpResponse.ok) throw new Error(`Gmail API /messages/${id} → ${httpResponse.status}`);
+  const envelope = await httpResponse.json();
 
   const headers = {};
-  for (const h of data.payload?.headers ?? []) {
+  for (const h of envelope.payload?.headers ?? []) {
     headers[h.name.toLowerCase()] = h.value;
   }
 
   return {
-    id: data.id,
+    id: envelope.id,
     from: headers.from ?? "",
     to: headers.to ?? "",
     date: headers.date ? new Date(headers.date) : null,
@@ -62,12 +54,6 @@ export async function getMessage(id) {
   };
 }
 
-/**
- * Return all unique email addresses the authenticated user has SENT TO,
- * looking back at up to `limit` sent messages.
- *
- * Result: Map<email, { name, lastContacted: Date }>
- */
 export async function getSentContacts(limit = 200) {
   const ids = await listMessages("in:sent", limit);
   const contacts = new Map();
@@ -93,7 +79,6 @@ export async function getSentContacts(limit = 200) {
   return contacts;
 }
 
-// Parse "Name <email>, bare@email.com" → [{ name, email }]
 function parseAddresses(header) {
   if (!header) return [];
   return header.split(",").flatMap((part) => {
