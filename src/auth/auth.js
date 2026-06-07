@@ -22,7 +22,6 @@ function buildAuthUrl() {
 }
 
 export async function getToken(interactive = false) {
-  // Return cached token if still valid (with 60s margin)
   const cached = await chrome.storage.session.get(["token", "tokenExpiry"]);
   if (cached.token && cached.tokenExpiry > Date.now() + 60_000) {
     return cached.token;

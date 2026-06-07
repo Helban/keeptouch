@@ -19,8 +19,8 @@ async function render() {
       try {
         await getToken(true); // interactive = shows consent screen
         render();
-      } catch (e) {
-        statusEl.textContent = `Error: ${e.message}`;
+      } catch (err) {
+        statusEl.textContent = `Error: ${err.message}`;
       }
     };
   }
