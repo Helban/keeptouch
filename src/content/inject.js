@@ -1,38 +1,29 @@
-// Content script — runs on mail.google.com.
-// Injects the sidebar iframe into Gmail's DOM and wires up communication.
-
 (function () {
   "use strict";
 
   // Prevent double-injection (Gmail is a SPA, script may run multiple times)
   if (document.getElementById("keeptouch-root")) return;
 
-  // ── Sidebar container ──────────────────────────────────────────────────
+  const toggleBtn = document.createElement("div");
+  toggleBtn.id = "keeptouch-toggle";
+  toggleBtn.title = "Keeptouch";
+  toggleBtn.textContent = "KT";
+
+  const frame = document.createElement("iframe");
+  frame.id = "keeptouch-frame";
+  frame.src = chrome.runtime.getURL("src/sidebar/sidebar.html");
+  frame.setAttribute("frameborder", "0");
 
   const container = document.createElement("div");
   container.id = "keeptouch-root";
-  container.innerHTML = `
-    <div id="keeptouch-toggle" title="Keeptouch">KT</div>
-    <iframe
-      id="keeptouch-frame"
-      src="${chrome.runtime.getURL("src/sidebar/sidebar.html")}"
-      frameborder="0"
-    ></iframe>
-  `;
+  container.append(toggleBtn, frame);
   document.body.appendChild(container);
 
-  // ── Toggle open/close ──────────────────────────────────────────────────
-
-  const toggle = document.getElementById("keeptouch-toggle");
-  const frame = document.getElementById("keeptouch-frame");
   let open = false;
-
-  toggle.addEventListener("click", () => {
+  toggleBtn.addEventListener("click", () => {
     open = !open;
     container.classList.toggle("keeptouch-open", open);
   });
-
-  // ── Relay messages from iframe to service worker ───────────────────────
 
   const EXTENSION_ORIGIN = chrome.runtime.getURL("").slice(0, -1); // "chrome-extension://<id>"
 
@@ -47,8 +38,6 @@
       frame.contentWindow.postMessage({ type: `${type}_RESPONSE`, payload: response }, EXTENSION_ORIGIN);
     });
   });
-
-  // ── Push updates from service worker into the iframe ──────────────────
 
   chrome.runtime.onMessage.addListener((msg) => {
     if (msg.type === "CONTACTS_UPDATED") {
