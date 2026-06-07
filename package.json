@@ -1,0 +1,25 @@
+{
+  "name": "keeptouch",
+  "version": "1.0.0",
+  "description": "> Gmail sidebar showing people you haven't emailed in a while.",
+  "scripts": {
+    "lint": "eslint src/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Helban/keeptouch.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Helban/keeptouch/issues"
+  },
+  "homepage": "https://github.com/Helban/keeptouch#readme",
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.4.1",
+    "globals": "^17.6.0"
+  },
+  "type": "module"
+}
