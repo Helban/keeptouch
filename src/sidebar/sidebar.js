@@ -1,4 +1,3 @@
-// Sidebar UI — runs inside the iframe, communicates via postMessage.
 // No direct chrome.* access here (cross-origin iframe restriction).
 
 const DAYS_THRESHOLD = 30;
@@ -21,8 +20,6 @@ function daysAgo(n) {
   return new Date(Date.now() - n * 86400000).toISOString();
 }
 
-// ── DOM refs ────────────────────────────────────────────────────────────────
-
 const views = {
   auth: document.getElementById("view-auth"),
   loading: document.getElementById("view-loading"),
@@ -34,9 +31,6 @@ const contactList = document.getElementById("contact-list");
 const btnSignin = document.getElementById("btn-signin");
 const btnRefresh = document.getElementById("btn-refresh");
 
-// ── Message helpers (postMessage to parent content script) ──────────────────
-
-// Responses come from the content script on mail.google.com
 const GMAIL_ORIGIN = "https://mail.google.com";
 
 function sendToParent(type, payload, timeoutMs = 10_000) {
@@ -59,14 +53,10 @@ function sendToParent(type, payload, timeoutMs = 10_000) {
   });
 }
 
-// ── Views ───────────────────────────────────────────────────────────────────
-
 function showView(name) {
   Object.values(views).forEach((v) => v.classList.add("hidden"));
   views[name]?.classList.remove("hidden");
 }
-
-// ── Init ────────────────────────────────────────────────────────────────────
 
 async function init() {
   if (DEMO_MODE) {
@@ -95,8 +85,6 @@ async function loadContacts() {
   renderContacts(contacts ?? []);
 }
 
-// ── Render ──────────────────────────────────────────────────────────────────
-
 function renderContacts(contacts) {
   const now = Date.now();
   const cutoff = DAYS_THRESHOLD * 24 * 60 * 60 * 1000;
@@ -118,47 +106,62 @@ function renderContacts(contacts) {
     return;
   }
 
-  contactList.innerHTML = stale
-    .map((c) => {
+  contactList.replaceChildren(
+    ...stale.map((c) => {
       const days = c.lastContacted
         ? Math.floor((now - new Date(c.lastContacted).getTime()) / 86400000)
         : null;
-      const label = days !== null ? `${days}d ago` : "never";
-      const display = c.name || c.email;
-      const composeUrl = `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(c.email)}`;
-      return `
-        <li class="contact-item">
-          <div class="contact-avatar">${initials(display)}</div>
-          <div class="contact-info">
-            <span class="contact-name">${escHtml(display)}</span>
-            <span class="contact-email">${escHtml(c.email)}</span>
-          </div>
-          <a class="contact-compose" href="${composeUrl}" target="_blank" title="Compose">✉</a>
-          <span class="contact-age">${label}</span>
-        </li>`;
+      const contactLabel = c.name || c.email;
+
+      const avatar = document.createElement("div");
+      avatar.className = "contact-avatar";
+      avatar.textContent = initials(contactLabel);
+
+      const nameSpan = document.createElement("span");
+      nameSpan.className = "contact-name";
+      nameSpan.textContent = contactLabel;
+
+      const emailSpan = document.createElement("span");
+      emailSpan.className = "contact-email";
+      emailSpan.textContent = c.email;
+
+      const info = document.createElement("div");
+      info.className = "contact-info";
+      info.append(nameSpan, emailSpan);
+
+      const compose = document.createElement("a");
+      compose.className = "contact-compose";
+      compose.href = `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(c.email)}`;
+      compose.target = "_blank";
+      compose.title = "Compose";
+      compose.textContent = "✉";
+
+      const age = document.createElement("span");
+      age.className = "contact-age";
+      age.textContent = days !== null ? `${days}d ago` : "never";
+
+      const li = document.createElement("li");
+      li.className = "contact-item";
+      li.append(avatar, info, compose, age);
+      return li;
     })
-    .join("");
+  );
 
   showView("list");
 }
 
-// ── Event listeners ──────────────────────────────────────────────────────────
-
 btnSignin.addEventListener("click", async () => {
   showView("loading");
-  await sendToParent("SIGN_IN"); // triggers getToken(true) in service worker
+  await sendToParent("SIGN_IN");
   await loadContacts();
 });
 
 btnRefresh.addEventListener("click", loadContacts);
 
-// Service worker pushed an update (only accept from Gmail content script)
 window.addEventListener("message", (event) => {
   if (event.origin !== GMAIL_ORIGIN) return;
   if (event.data?.type === "CONTACTS_UPDATED") loadContacts();
 });
-
-// ── Utilities ────────────────────────────────────────────────────────────────
 
 function initials(name) {
   return name
@@ -167,11 +170,5 @@ function initials(name) {
     .map((w) => w[0]?.toUpperCase() ?? "")
     .join("");
 }
-
-function escHtml(str) {
-  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
-
-// ── Start ────────────────────────────────────────────────────────────────────
 
 init();
