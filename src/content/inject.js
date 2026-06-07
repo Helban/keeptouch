@@ -35,6 +35,10 @@
     if (!type) return;
 
     chrome.runtime.sendMessage({ type, payload }, (response) => {
+      if (chrome.runtime.lastError) {
+        frame.contentWindow.postMessage({ type: `${type}_RESPONSE`, payload: {} }, EXTENSION_ORIGIN);
+        return;
+      }
       frame.contentWindow.postMessage({ type: `${type}_RESPONSE`, payload: response }, EXTENSION_ORIGIN);
     });
   });
