@@ -54,24 +54,25 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 
 async function refreshContacts() {
   if (!(await isSignedIn())) return;
-  await _fetchAndStoreContacts();
-}
-
-async function _fetchAndStoreContacts() {
   try {
-    const contacts = await getSentContacts(200);
-    const serializable = Array.from(contacts.entries()).map(([email, contact]) => ({
-      email,
-      name: contact.name,
-      lastContacted: contact.lastContacted?.toISOString() ?? null,
-    }));
-    await chrome.storage.local.set({ contacts: serializable, lastRefresh: Date.now() });
-    chrome.runtime.sendMessage({ type: "CONTACTS_UPDATED" }).catch(() => {
-      // Content script might not be open; ignore.
-    });
+    await _fetchAndStoreContacts();
   } catch (err) {
     console.error("[Keeptouch] refreshContacts failed:", err);
   }
+}
+
+async function _fetchAndStoreContacts() {
+  const contacts = await getSentContacts(200);
+  const serializable = Array.from(contacts.entries()).map(([email, contact]) => ({
+    email,
+    name: contact.name,
+    lastContacted: contact.lastContacted?.toISOString() ?? null,
+  }));
+  await chrome.storage.local.set({ contacts: serializable, lastRefresh: Date.now() });
+  chrome.runtime.sendMessage({ type: "CONTACTS_UPDATED" }).catch(() => {
+    // Content script might not be open; ignore.
+  });
+  return serializable;
 }
 
 async function handleGetContacts(sendResponse) {
@@ -81,9 +82,8 @@ async function handleGetContacts(sendResponse) {
     const signedIn = await isSignedIn();
 
     if (stale && signedIn) {
-      await _fetchAndStoreContacts();
-      const { contacts: fresh } = await chrome.storage.local.get("contacts");
-      sendResponse({ contacts: fresh ?? [] });
+      const fresh = await _fetchAndStoreContacts();
+      sendResponse({ contacts: fresh });
     } else {
       sendResponse({ contacts: contacts ?? [] });
     }
