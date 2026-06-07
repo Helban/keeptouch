@@ -65,13 +65,16 @@ async function init() {
   }
 
   showView("loading");
-  const { signedIn } = await sendToParent("CHECK_AUTH");
-  if (!signedIn) {
+  try {
+    const { signedIn } = await sendToParent("CHECK_AUTH");
+    if (!signedIn) {
+      showView("auth");
+      return;
+    }
+    await loadContacts();
+  } catch {
     showView("auth");
-    return;
   }
-
-  await loadContacts();
 }
 
 async function loadContacts() {
@@ -81,8 +84,12 @@ async function loadContacts() {
   }
 
   showView("loading");
-  const { contacts } = await sendToParent("GET_CONTACTS");
-  renderContacts(contacts ?? []);
+  try {
+    const { contacts } = await sendToParent("GET_CONTACTS");
+    renderContacts(contacts ?? []);
+  } catch {
+    showView("auth");
+  }
 }
 
 function renderContacts(contacts) {
@@ -152,8 +159,13 @@ function renderContacts(contacts) {
 
 btnSignin.addEventListener("click", async () => {
   showView("loading");
-  await sendToParent("SIGN_IN");
-  await loadContacts();
+  try {
+    const result = await sendToParent("SIGN_IN");
+    if (!result?.ok) { showView("auth"); return; }
+    await loadContacts();
+  } catch {
+    showView("auth");
+  }
 });
 
 btnRefresh.addEventListener("click", loadContacts);
