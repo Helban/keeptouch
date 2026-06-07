@@ -7,13 +7,10 @@ import { getSentContacts } from "../api/gmail.js";
 const ALARM_NAME = "refresh-contacts";
 const REFRESH_INTERVAL_MINUTES = 60;
 
-// ── Alarm: periodic refresh ────────────────────────────────────────────────
-
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === ALARM_NAME) refreshContacts();
 });
 
-// Register the alarm once on install / browser start
 chrome.runtime.onInstalled.addListener(scheduleAlarm);
 chrome.runtime.onStartup.addListener(scheduleAlarm);
 
@@ -22,8 +19,6 @@ async function scheduleAlarm() {
   chrome.alarms.create(ALARM_NAME, { periodInMinutes: REFRESH_INTERVAL_MINUTES });
 }
 
-// ── Message routing (content script ↔ service worker) ─────────────────────
-
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   switch (msg.type) {
     case "GET_CONTACTS":
@@ -31,32 +26,44 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       return true; // keep channel open for async response
 
     case "REFRESH_CONTACTS":
-      refreshContacts().then(() => sendResponse({ ok: true }));
+      (async () => {
+        await refreshContacts();
+        sendResponse({ ok: true });
+      })();
       return true;
 
     case "CHECK_AUTH":
-      isSignedIn().then((ok) => sendResponse({ signedIn: ok }));
+      (async () => {
+        const signedIn = await isSignedIn();
+        sendResponse({ signedIn });
+      })();
       return true;
 
     case "SIGN_IN":
-      getToken(true)
-        .then(() => sendResponse({ ok: true }))
-        .catch((e) => sendResponse({ ok: false, error: e.message }));
+      (async () => {
+        try {
+          await getToken(true);
+          sendResponse({ ok: true });
+        } catch (err) {
+          sendResponse({ ok: false, error: err.message });
+        }
+      })();
       return true;
   }
 });
 
-// ── Business logic ─────────────────────────────────────────────────────────
+async function refreshContacts() {
+  if (!(await isSignedIn())) return;
+  await _fetchAndStoreContacts();
+}
 
-async function refreshContacts(alreadyVerified = false) {
-  if (!alreadyVerified && !(await isSignedIn())) return;
-
+async function _fetchAndStoreContacts() {
   try {
     const contacts = await getSentContacts(200);
-    const serializable = Array.from(contacts.entries()).map(([email, data]) => ({
+    const serializable = Array.from(contacts.entries()).map(([email, contact]) => ({
       email,
-      name: data.name,
-      lastContacted: data.lastContacted?.toISOString() ?? null,
+      name: contact.name,
+      lastContacted: contact.lastContacted?.toISOString() ?? null,
     }));
     await chrome.storage.local.set({ contacts: serializable, lastRefresh: Date.now() });
     chrome.runtime.sendMessage({ type: "CONTACTS_UPDATED" }).catch(() => {
@@ -74,9 +81,9 @@ async function handleGetContacts(sendResponse) {
     const signedIn = await isSignedIn();
 
     if (stale && signedIn) {
-      await refreshContacts(/* already verified signed in */ true);
-      const updated = await chrome.storage.local.get("contacts");
-      sendResponse({ contacts: updated.contacts ?? [] });
+      await _fetchAndStoreContacts();
+      const { contacts: fresh } = await chrome.storage.local.get("contacts");
+      sendResponse({ contacts: fresh ?? [] });
     } else {
       sendResponse({ contacts: contacts ?? [] });
     }
