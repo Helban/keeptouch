@@ -7,48 +7,48 @@
 ## Features
 
 - Sidebar slides in from the right inside Gmail
-- Scans your Sent folder and shows contacts silent for ≥ 30 days
+- Scans your Sent folder and shows contacts silent for 30+ days
 - One-click compose to any contact
 - Hourly background refresh via Chrome Alarms API
-- OAuth2 via `chrome.identity` — no server required
+- OAuth2 via `chrome.identity`, no backend needed
 
 ## Quick start (demo mode)
 
-Want to see the UI without connecting your Gmail account?
+To see the UI without connecting your Gmail account:
 
 1. Clone the repo
 2. Open `src/sidebar/sidebar.js` and set `DEMO_MODE = true`
-3. Open `chrome://extensions` → enable **Developer mode** → **Load unpacked** → select the `keeptouch/` folder
-4. Open Gmail — click the **KT** button on the right edge
+3. Open `chrome://extensions`, enable **Developer mode**, click **Load unpacked** and select the `keeptouch/` folder
+4. Open Gmail and click the **KT** button on the right edge
 
 You'll see a list of fake contacts. No Google account or API key needed.
 
 ## Full setup (real Gmail data)
 
-> You'll need a Google account and ~30 minutes if this is your first time setting up a Google Cloud project.
+> You'll need a Google account and about 30 minutes if this is your first time creating a Google Cloud project.
 
-### Step 1 — Clone and load the extension
+### Step 1: Clone and load the extension
 
 ```bash
 git clone https://github.com/Helban/keeptouch.git
 ```
 
-Open `chrome://extensions`, enable **Developer mode**, click **Load unpacked** and select the `keeptouch/` folder. Note down the **Extension ID** shown below the extension name (32-character string).
+Open `chrome://extensions`, enable **Developer mode**, click **Load unpacked** and select the `keeptouch/` folder. Note the Extension ID shown below the extension name (32-character string).
 
-### Step 2 — Google Cloud project
+### Step 2: Google Cloud project
 
 1. Go to [console.cloud.google.com](https://console.cloud.google.com) and create a new project
-2. Enable **Gmail API** (*APIs & Services → Enable APIs → Gmail API*)
-3. Configure the OAuth consent screen (*APIs & Services → OAuth consent screen*):
+2. Enable **Gmail API** under APIs & Services
+3. Configure the OAuth consent screen:
    - User type: **External**
    - Add your Gmail address as a **Test user**
    - Add scope: `https://www.googleapis.com/auth/gmail.readonly`
-4. Create credentials (*Credentials → Create → OAuth 2.0 Client ID*):
+4. Create credentials (Credentials, Create, OAuth 2.0 Client ID):
    - Application type: **Chrome Extension**
-   - Item ID: paste your **Extension ID** from Step 1
+   - Item ID: paste your Extension ID from Step 1
    - Copy the generated **Client ID**
 
-### Step 3 — Add your Client ID
+### Step 3: Add your Client ID
 
 Open `src/auth/auth.js` and replace the `CLIENT_ID` constant:
 
@@ -58,7 +58,7 @@ const CLIENT_ID = "YOUR_CLIENT_ID.apps.googleusercontent.com";
 
 Reload the extension in `chrome://extensions` (click the refresh icon), open Gmail, and sign in via the extension popup.
 
-> **Note:** The first time Google will show an "unverified app" warning — click *Advanced → Proceed* to continue. This appears because the app isn't published to the Chrome Web Store.
+> The first time Google shows an "unverified app" warning. Click Advanced, then Proceed. This appears because the app is not published to the Chrome Web Store.
 
 ## Configuration
 
@@ -89,13 +89,13 @@ sidebar.html / sidebar.js  (rendered in extension origin)
 
 ## Security
 
-**Data collected:** email addresses and last-contacted dates only. No message bodies, subjects, or attachments are ever fetched — the Gmail API is called with `format=metadata`.
+The extension only reads email addresses and send dates from your Sent folder. It calls the Gmail API with `format=metadata` and never fetches message bodies, subjects, or attachments.
 
-**Token handling:** OAuth2 tokens are managed exclusively by `chrome.identity` and never written to `chrome.storage`. Chrome handles token caching and silent refresh internally.
+OAuth2 tokens stay inside `chrome.identity` and are never written to `chrome.storage`. Chrome handles caching and silent refresh.
 
-**postMessage hardening:** the sidebar runs in a `chrome-extension://` iframe embedded in Gmail. All `postMessage` calls are scoped to explicit origins (`chrome.runtime.getURL("")` and `https://mail.google.com`) so neither Gmail's page nor any third-party site can inject or intercept messages.
+The sidebar runs in a `chrome-extension://` iframe inside Gmail. Every `postMessage` call checks the sender origin explicitly: `chrome.runtime.getURL("")` on the extension side, `https://mail.google.com` on the Gmail side. The Gmail page cannot inject or intercept messages.
 
-**No backend:** all data stays on the user's machine in `chrome.storage.local`, isolated to this extension's origin.
+No data leaves the machine. The extension stores contacts in `chrome.storage.local`, isolated to this extension's origin.
 
 ## Permissions
 
