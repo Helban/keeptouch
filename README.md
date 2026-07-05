@@ -91,7 +91,7 @@ sidebar.html / sidebar.js  (rendered in extension origin)
 
 The extension only reads email addresses and send dates from your Sent folder. It calls the Gmail API with `format=metadata` and never fetches message bodies, subjects, or attachments.
 
-OAuth2 tokens stay inside `chrome.identity` and are never written to `chrome.storage`. Chrome handles caching and silent refresh.
+OAuth2 tokens are stored in `chrome.storage.session`, which Chrome clears when the browser closes. They are never written to `chrome.storage.local` or `chrome.storage.sync`.
 
 The sidebar runs in a `chrome-extension://` iframe inside Gmail. Every `postMessage` call checks the sender origin explicitly: `chrome.runtime.getURL("")` on the extension side, `https://mail.google.com` on the Gmail side. The Gmail page cannot inject or intercept messages.
 
@@ -108,3 +108,7 @@ No data leaves the machine. The extension stores contacts in `chrome.storage.loc
 | `https://www.googleapis.com/*` | Call Gmail REST API |
 | `gmail.readonly` | Read sent messages (no write) |
 | `contacts.readonly` | Optional: enrich names from Google Contacts |
+
+---
+
+Made by Adam Kramarczyk. More Chrome extensions and live projects at [helban.dev](https://helban.dev).
