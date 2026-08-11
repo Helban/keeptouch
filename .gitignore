@@ -1,1 +1,6 @@
 node_modules/
+
+# Upwork portfolio upload bundle and the screenshots it is built from. They live
+# here for convenience when refreshing the listing; the repo ships the code.
+files.zip
+files/
